@@ -89,7 +89,6 @@ struct json_object * load_saved_anime(char* filepath) {
         free(anime_array);
         return NULL;
     }
-    printf("Anime array len: %zu\n", json_object_array_length(anime_array));
 
     return anime_array;
 }
@@ -106,6 +105,10 @@ int main() {
     }
 
     list_all(anime_array);
+
+    print_new_episodes(anime_array);
+
+    print_new_episodes_count(anime_array);
 
     json_object_put(anime_array);
     free(filepath);
