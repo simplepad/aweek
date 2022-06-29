@@ -67,8 +67,9 @@ struct json_object * load_saved_anime(char* filepath) {
         fprintf(stderr, "Failed to get file information\n");
     }
 
-    char * buffer = malloc(sb.st_size);
+    char * buffer = malloc(sb.st_size + 1);
     if (buffer == NULL) return NULL;
+    buffer[sb.st_size] = '\0';
 
     FILE * file = fopen(filepath, "r");
     if (fread(buffer, sb.st_size, 1, file) != 1) {
@@ -106,7 +107,7 @@ int main() {
 
     list_all(anime_array);
 
-    free(anime_array);
+    json_object_put(anime_array);
     free(filepath);
     return 0;
 }
