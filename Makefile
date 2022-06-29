@@ -11,7 +11,7 @@ LDFLAGS += $(shell pkg-config --libs json-c)
 BUILDDIR = "build/"
 SRCDIR = "src/"
 
-aweek-c: initfolders anime_functions main
+all: initfolders anime_functions main
 	echo "Building aweek-c"
 	$(CC) -o bin/aweek-c build/main.o build/anime_functions.o $(LDFLAGS)
 
