@@ -1,9 +1,5 @@
-#ifndef JSON_C
-#define JSON_C
 #include <json.h>
 #include <stdio.h>
-
-#endif //JSON_C
 
 /**
  * List all saved anime
