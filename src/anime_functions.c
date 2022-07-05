@@ -18,7 +18,7 @@ int list_all(struct json_object * anime_array) {
     struct json_object * anime_start_date;
     time_t start_unix;
     struct tm * start_datetime;
-    char start_string[15];
+    char start_string[16];
 
     printf("%3c | %-30.30s | %-8.8s | %-15.15s\n", '#', "Anime name", "Episodes", "Broadcast");
     for (i=0; i<65; i++) putchar('-');
@@ -46,7 +46,10 @@ int list_all(struct json_object * anime_array) {
         }
         start_unix = json_object_get_int64(anime_start_date);
         start_datetime = localtime(&start_unix);
-        strftime(start_string, sizeof(start_string), "%A %H:%M", start_datetime);
+        if (strftime(start_string, sizeof(start_string), "%A %H:%M", start_datetime) == 0) {
+            fprintf(stderr, "Failed to fit formatted start date in a char array\n");
+            return -1;
+        }
         printf("%3zu | %-30.30s | %3d/%-3d | %-15.15s\n",
                i+1,
                json_object_get_string(anime_name),
