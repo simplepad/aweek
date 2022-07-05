@@ -1,6 +1,8 @@
 #include <json.h>
 #include <stdio.h>
+#define __USE_XOPEN // for strptime
 #include <time.h>
+#include "../include/anime_functions.h"
 
 /**
  * List all saved anime
@@ -187,6 +189,105 @@ int print_new_episodes_count(struct json_object * anime_array) {
     }
 
     printf("%zu\n", new_episodes);
+
+    return 0;
+}
+
+/**
+ * Helper function to create an anime json object from provided values
+ * @param name anime name
+ * @param episodes anime's episode count
+ * @param start_date anime's broadcast start date
+ * @return a pointer to anime json object or NULL on error
+ */
+struct json_object * make_anime_json_object(char * name, size_t episodes, time_t start_date) {
+    struct json_object * anime_obj = json_object_new_object();
+
+    if (json_object_object_add(anime_obj, "name", json_object_new_string(name)) != 0) return NULL;
+    if (json_object_object_add(anime_obj, "episodes", json_object_new_uint64(episodes)) != 0) return NULL;
+    if (json_object_object_add(anime_obj, "episodes_downloaded", json_object_new_uint64(0)) != 0) return NULL;
+    if (json_object_object_add(anime_obj, "start_date", json_object_new_uint64(start_date)) != 0) return NULL;
+    if (json_object_object_add(anime_obj, "delayed_episodes", json_object_new_array()) != 0) return NULL;
+    if (json_object_object_add(anime_obj, "ignored", json_object_new_boolean(0)) != 0) return NULL;
+
+    return anime_obj;
+}
+
+/**
+ * Helper function to make an anime json object with information provided though stdin
+ * @return a pointer to anime json object or NULL on error
+ */
+struct json_object * make_anime_manual() {
+    char anime_name[100]; // when changing size also change input format string in scanf()
+    char anime_episodes_str[5]; // when changing size also change input format string in scanf()
+    size_t anime_episodes;
+    char time_str[17]; // when changing size also change input format string in scanf()
+    time_t time_raw;
+    struct tm * time_tm;
+
+    puts("Adding anime manually");
+
+    printf("Enter anime name: ");
+    if (scanf("%99s", anime_name) != 1) {
+        fprintf(stderr, "Failed to parse anime name\n");
+        return NULL;
+    }
+
+    printf("Enter anime episodes count: ");
+    if (scanf("%4s", anime_episodes_str) != 1) {
+        fprintf(stderr, "Failed to parse anime episodes count\n");
+        return NULL;
+    }
+    anime_episodes = strtoul(anime_episodes_str, NULL, 10);
+    if (anime_episodes <= 0) {
+        fprintf(stderr, "Failed to convert anime episodes count to unsigned long\n");
+        return NULL;
+    }
+
+    time(&time_raw);
+    time_tm = localtime(&time_raw);
+    if (strftime(time_str, sizeof(time_str), "%F %R", time_tm) == 0) { //strftime appends a '\0' at the end automatically
+        fprintf(stderr, "Failed to convert struct tm to string\n");
+        return NULL;
+    }
+    printf("Enter anime broadcast start date (format: %s) (JST): ", time_str);
+    if (scanf("%16s", time_str) != 1) {
+        fprintf(stderr, "Failed to parse anime broadcast start date\n");
+        return NULL;
+    }
+    if (strptime(time_str, "%Y-%m-%d %H:%M", time_tm) != NULL) {
+        fprintf(stderr, "Failed to convert string to struct tm\n");
+        return NULL;
+    }
+    time_tm->tm_gmtoff = 9 * 60 * 60; // JST is GMT+9
+    time_raw = mktime(time_tm);
+
+    return make_anime_json_object(anime_name, anime_episodes, time_raw);
+}
+
+/**
+ * Create and add a new anime json object to the provided json array
+ * @param anime_array json array to add the new anime json object to
+ * @param method the method to use when creating a new anime json object
+ * @return `0` if the anime was created and added successfully, otherwise `-1` on error
+ */
+int add_anime(struct json_object * anime_array, enum ADD_ANIME_METHOD method) {
+    struct json_object * anime; // do not try to json_object_put() this
+
+    switch (method) {
+        case MANUAL:
+            anime = make_anime_manual();
+            break;
+        default:
+            return -1;
+    }
+
+    if (anime == NULL) {
+        fprintf(stderr, "Failed to create anime manually\n");
+        return -1;
+    }
+
+    json_object_array_add(anime_array, anime);
 
     return 0;
 }

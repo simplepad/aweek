@@ -1,7 +1,4 @@
-#ifndef JSON_C
-#define JSON_C
 #include <json.h>
-#endif //JSON_C
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -109,6 +106,10 @@ int main() {
     print_new_episodes(anime_array);
 
     print_new_episodes_count(anime_array);
+
+    add_anime(anime_array, MANUAL);
+
+    puts(json_object_to_json_string_ext(anime_array, JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_SPACED));
 
     json_object_put(anime_array);
     free(filepath);
