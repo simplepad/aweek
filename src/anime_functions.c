@@ -225,6 +225,7 @@ struct json_object * make_anime_manual() {
     char anime_episodes_str[5]; // when changing size also change input format string in scanf()
     size_t anime_episodes;
     char time_str[17]; // when changing size also change input format string in scanf()
+    int year, month, day, hours, minutes;
     time_t time_raw;
     struct tm * time_tm;
 
@@ -254,15 +255,20 @@ struct json_object * make_anime_manual() {
         return NULL;
     }
     printf("Enter anime broadcast start date (format: %s) (JST): ", time_str);
-    if (scanf("%16s", time_str) != 1) { // TODO probably not working correctly
-        fprintf(stderr, "Failed to parse anime broadcast start date\n");
-        return NULL;
-    }
-    if (strptime(time_str, "%Y-%m-%d %H:%M", time_tm) != NULL) {
+    while (getchar() != '\n');
+    fgets(time_str, sizeof(time_str), stdin);
+    memset(time_tm, 0, sizeof(struct tm));
+    if (sscanf(time_str, "%d-%d-%d %d:%d", &year, &month, &day, &hours, &minutes) != 5) {
         fprintf(stderr, "Failed to convert string to struct tm\n");
         return NULL;
     }
-    time_tm->tm_gmtoff = 9 * 60 * 60; // JST is GMT+9
+    time_tm->tm_year = year - 1900;
+    time_tm->tm_mon = month - 1; // months start from 0... why
+    time_tm->tm_mday = day;
+    time_tm->tm_hour = hours;
+    time_tm->tm_min = minutes;
+    setenv("TZ", "Asia/Tokyo", 1);
+    tzset();
     time_raw = mktime(time_tm);
 
     return make_anime_json_object(anime_name, anime_episodes, time_raw);
@@ -435,7 +441,7 @@ int edit_anime(struct json_object * anime) {
 
             memset(start_date, 0, sizeof(struct tm));
             if (sscanf(start_date_str, "%d-%d-%d %d:%d", &year, &month, &day, &hours, &minutes) != 5) {
-                fprintf(stderr, "Failed to convert string to struct tm\n"); //TODO
+                fprintf(stderr, "Failed to convert string to struct tm\n");
                 return -1;
             }
             start_date->tm_year = year - 1900;
