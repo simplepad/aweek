@@ -1,7 +1,9 @@
+// for strptime
+#define _GNU_SOURCE
 #include <json.h>
 #include <stdio.h>
-#define __USE_XOPEN // for strptime
 #include <time.h>
+#include <string.h>
 #include "../include/anime_functions.h"
 
 /**
@@ -145,7 +147,6 @@ int print_new_episodes(struct json_object * anime_array) {
 
     for (i=0; i<n_anime; i++) {
         episodes_available = get_new_episodes_count(anime_array, i);
-        if (episodes_available < 0) return -1;
 
         anime = json_object_array_get_idx(anime_array, i);
 
@@ -187,7 +188,6 @@ int print_new_episodes_count(struct json_object * anime_array) {
 
     for (i=0; i<n_anime; i++) {
         episodes_available = get_new_episodes_count(anime_array, i);
-        if (episodes_available < 0) return -1;
         new_episodes += episodes_available;
     }
 
@@ -254,7 +254,7 @@ struct json_object * make_anime_manual() {
         return NULL;
     }
     printf("Enter anime broadcast start date (format: %s) (JST): ", time_str);
-    if (scanf("%16s", time_str) != 1) {
+    if (scanf("%16s", time_str) != 1) { // TODO probably not working correctly
         fprintf(stderr, "Failed to parse anime broadcast start date\n");
         return NULL;
     }
@@ -291,6 +291,261 @@ int add_anime(struct json_object * anime_array, enum ADD_ANIME_METHOD method) {
     }
 
     json_object_array_add(anime_array, anime);
+
+    return 0;
+}
+
+/**
+ * Edit one anime field by providing input through stdin
+ * @param anime anime to edit
+ * @return 0 if the anime was edited successfully, otherwise -1 on error indicating that saving should not be performed
+ */
+int edit_anime(struct json_object * anime) {
+    char choice_str[2];
+    size_t choice;
+
+    char anime_name[100];
+    struct json_object * anime_name_obj;
+
+    size_t episodes;
+    struct json_object * episodes_obj;
+    char episodes_str[5];
+
+    struct tm * start_date;
+    int year, month, day, hours, minutes;
+    time_t start_date_raw;
+    char start_date_str[17];
+    struct json_object * start_date_obj;
+
+    size_t i, delayed_episodes_length;
+    size_t delayed_episode_temp;
+    char delayed_episodes_str_buffer; // for getting input char by char
+    int scanning = 1;
+    char delayed_episodes_str[5]; // string to store input for scanning later
+    struct json_object * delayed_episode_obj; // an array of delayed episodes
+    struct json_object * delayed_episodes_obj;
+
+    char ignored_str[6];
+    struct json_object * ignored_obj;
+
+    puts("Select the field to edit:");
+    puts("\t1) Name");
+    puts("\t2) Episodes count");
+    puts("\t3) Downloaded episodes count");
+    puts("\t4) Start date");
+    puts("\t5) Delayed episodes");
+    puts("\t6) Ignored flag");
+
+    printf("Enter your choice: ");
+    if (scanf("%1s", choice_str) != 1) {
+        fprintf(stderr, "Failed to parse choice\n");
+        return -1;
+    }
+    choice = strtoul(choice_str, NULL, 10);
+    if (choice <= 0 || choice > 6) {
+        fprintf(stderr, "Failed to select the field to edit\n");
+        return -1;
+    }
+
+    switch (choice) {
+        case 1: // name
+            if (!json_object_object_get_ex(anime, "name", &anime_name_obj)) {
+                fprintf(stderr, "Failed to get current anime name\n");
+                return -1;
+            }
+
+            printf("Current anime name: %s\n", json_object_get_string(anime_name_obj));
+            printf("Enter new anime name: ");
+            if (scanf("%99s", anime_name) != 1) {
+                fprintf(stderr, "Failed to read new anime name\n");
+                return -1;
+            }
+
+            if (!json_object_set_string(anime_name_obj, anime_name)) {
+                fprintf(stderr, "Failed to set new anime name\n");
+                return -1;
+            }
+            break;
+        case 2: // episodes
+            if (!json_object_object_get_ex(anime, "episodes", &episodes_obj)) {
+                fprintf(stderr, "Failed to get current anime episodes count\n");
+                return -1;
+            }
+
+            printf("Current anime episodes count: %zu\n", json_object_get_uint64(episodes_obj));
+            printf("Enter new anime episodes count: ");
+            if (scanf("%4s", episodes_str) != 1) {
+                fprintf(stderr, "Failed to read new anime episodes count\n");
+                return -1;
+            }
+            episodes = strtoul(episodes_str, NULL, 10);
+            if (episodes <= 0 || episodes > 9999) {
+                fprintf(stderr, "Failed to parse new anime episodes count\n");
+                return -1;
+            }
+
+            if (!json_object_set_uint64(episodes_obj, episodes)) {
+                fprintf(stderr, "Failed to set new anime episodes count\n");
+                return -1;
+            }
+            break;
+        case 3: // episodes downloaded
+            if (!json_object_object_get_ex(anime, "episodes_downloaded", &episodes_obj)) {
+                fprintf(stderr, "Failed to get current anime downloaded episodes count\n");
+                return -1;
+            }
+
+            printf("Current anime downloaded episodes count: %zu\n", json_object_get_uint64(episodes_obj));
+            printf("Enter new anime downloaded episodes count: ");
+            if (scanf("%4s", episodes_str) != 1) {
+                fprintf(stderr, "Failed to read new anime downloaded episodes count\n");
+                return -1;
+            }
+            episodes = strtoul(episodes_str, NULL, 10);
+            if (episodes <= 0 || episodes > 9999) { //TODO check that episodes_downloaded <= episodes
+                fprintf(stderr, "Failed to parse new anime downloaded episodes count\n");
+                return -1;
+            }
+
+            if (!json_object_set_uint64(episodes_obj, episodes)) {
+                fprintf(stderr, "Failed to set new anime downloaded episodes count\n");
+                return -1;
+            }
+            break;
+        case 4: // start date
+            if (!json_object_object_get_ex(anime, "start_date", &start_date_obj)) {
+                fprintf(stderr, "Failed to get current anime start date\n");
+                return -1;
+            }
+
+            start_date_raw = json_object_get_int64(start_date_obj);
+            setenv("TZ", "Asia/Tokyo", 1);
+            tzset();
+            start_date = localtime(&start_date_raw);
+
+            if (strftime(start_date_str, sizeof(start_date_str), "%F %R", start_date) == 0) {
+                fprintf(stderr, "Failed to convert struct tm to string\n");
+                return -1;
+            }
+
+            printf("Current anime broadcast start date (JST): %s\n", start_date_str);
+            printf("Enter new anime broadcast start date (JST): ");
+            while (getc(stdin) != '\n');
+            fgets(start_date_str, sizeof(start_date_str), stdin);
+
+            memset(start_date, 0, sizeof(struct tm));
+            if (sscanf(start_date_str, "%d-%d-%d %d:%d", &year, &month, &day, &hours, &minutes) != 5) {
+                fprintf(stderr, "Failed to convert string to struct tm\n"); //TODO
+                return -1;
+            }
+            start_date->tm_year = year - 1900;
+            start_date->tm_mon = month - 1; // months start from 0... why
+            start_date->tm_mday = day;
+            start_date->tm_hour = hours;
+            start_date->tm_min = minutes;
+            start_date_raw = mktime(start_date);
+
+            if (!json_object_set_int64(start_date_obj, start_date_raw)) {
+                fprintf(stderr, "Failed to set new anime broadcast start date\n");
+                return -1;
+            }
+            break;
+        case 5: // delayed episodes
+            if (!json_object_object_get_ex(anime, "delayed_episodes", &delayed_episodes_obj)) {
+                fprintf(stderr, "Failed to get current anime delayed episodes\n");
+                return -1;
+            }
+
+            delayed_episodes_length = json_object_array_length(delayed_episodes_obj);
+            printf("Current anime delayed episodes: ");
+            if (delayed_episodes_length != 0) {
+                for (i=0; i<delayed_episodes_length-1; i++) {
+                    delayed_episode_obj = json_object_array_get_idx(delayed_episodes_obj, i);
+                    if (delayed_episode_obj == NULL) {
+                        fprintf(stderr, "Failed to print current anime delayed episodes\n");
+                        return -1;
+                    }
+                    printf("%zu, ", json_object_get_uint64(delayed_episode_obj));
+                }
+                // print last
+                delayed_episode_obj = json_object_array_get_idx(delayed_episodes_obj, i);
+                if (delayed_episode_obj == NULL) {
+                    fprintf(stderr, "Failed to print current anime delayed episodes\n");
+                    return -1;
+                }
+                printf("%zu\n", json_object_get_uint64(delayed_episode_obj));
+            } else {
+                puts("none");
+            }
+
+            delayed_episodes_str[sizeof(delayed_episodes_str)-1] = '\0';
+            printf("Enter new anime delayed episodes: ");
+            while (getchar() != '\n'); // clear stdin
+            while (scanning) {
+                for (i=0; i < sizeof(delayed_episodes_str)-1; i++) {
+                    delayed_episodes_str_buffer = (char) getchar();
+                    if (delayed_episodes_str_buffer == ',') { // comma means the end of one episode number
+                        delayed_episodes_str[i] = '\0';
+                        break;
+                    }
+                    if (delayed_episodes_str_buffer == '\n') { // newline means the end of input
+                        scanning = 0;
+                        break;
+                    }
+                    if (delayed_episodes_str_buffer == ' '){ // skip whitespace
+                        i--;
+                        continue;
+                    }
+
+                    delayed_episodes_str[i] = delayed_episodes_str_buffer;
+                }
+
+                if (i != 0) { // if zero digits entered there is no need to parse
+                    delayed_episode_temp = strtoul(delayed_episodes_str, NULL, 0);
+                    if (delayed_episode_temp == 0) { // episode can't be zero, strtoul returns zero on error
+                        fprintf(stderr, "Failed to convert '%s' to a number\n", delayed_episodes_str);
+                        return -1;
+                    }
+                    json_object_array_add(delayed_episodes_obj, json_object_new_uint64(delayed_episode_temp));
+                }
+            }
+
+            json_object_array_shrink(delayed_episodes_obj, 0);
+            break;
+        case 6: // ignored
+            if (!json_object_object_get_ex(anime, "ignored", &ignored_obj)) {
+                fprintf(stderr, "Failed to get current anime ignored flag\n");
+                return -1;
+            }
+
+            printf("Current anime ignored flag: %s\n", json_object_get_boolean(ignored_obj) ? "True" : "False");
+            printf("Enter new anime ignored flag: ");
+            if (scanf("%5s", ignored_str) != 1) {
+                fprintf(stderr, "Failed to read new anime ignored flag\n");
+                return -1;
+            }
+
+            if (strcmp(ignored_str, "True") == 0) {
+                if (!json_object_set_boolean(ignored_obj, 1)) {
+                    fprintf(stderr, "Failed to set new anime ignored flag\n");
+                    return -1;
+                }
+                break;
+            } else if (strcmp(ignored_str, "False") == 0) {
+                if (!json_object_set_boolean(ignored_obj, 0)) {
+                    fprintf(stderr, "Failed to set new anime ignored flag\n");
+                    return -1;
+                }
+                break;
+            } else {
+                fprintf(stderr, "Failed to parse new anime ignored flag\n");
+                return -1;
+            }
+            break;
+        default:
+            fprintf(stderr, "Bad choice number\n");
+            return -1;
+    }
 
     return 0;
 }

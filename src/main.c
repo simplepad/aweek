@@ -107,7 +107,9 @@ int main() {
 
     print_new_episodes_count(anime_array);
 
-    add_anime(anime_array, MANUAL);
+    //add_anime(anime_array, MANUAL);
+
+    //edit_anime(json_object_array_get_idx(anime_array, 0));
 
     puts(json_object_to_json_string_ext(anime_array, JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_SPACED));
 
