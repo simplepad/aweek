@@ -611,3 +611,24 @@ int update_anime(struct json_object * anime, size_t downloaded_episodes) {
 
     return 0;
 }
+
+/**
+ * Toggle anime's ignored flag
+ * @param anime anime to edit
+ * @return 0 on success, otherwise -1 on error
+ */
+int toggle_anime_ignored(struct json_object * anime) {
+    struct json_object * ignored_obj;
+
+    if (!json_object_object_get_ex(anime, "ignored", &ignored_obj)) {
+        fprintf(stderr, "Failed to get anime ignored flag\n");
+        return -1;
+    }
+
+    if (!json_object_set_boolean(ignored_obj, !json_object_get_boolean(ignored_obj))) {
+        fprintf(stderr, "Failed to set new anime ignored flag\n");
+        return -1;
+    }
+
+    return 0;
+}
