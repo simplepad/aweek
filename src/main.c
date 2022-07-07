@@ -113,6 +113,8 @@ int main() {
 
     //delete_anime(anime_array, 0);
 
+    //update_anime(json_object_array_get_idx(anime_array, 0), 5);
+
     puts(json_object_to_json_string_ext(anime_array, JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_SPACED));
 
     json_object_put(anime_array);

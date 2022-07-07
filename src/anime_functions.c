@@ -408,12 +408,12 @@ int edit_anime(struct json_object * anime) {
                 return -1;
             }
             episodes = strtoul(episodes_str, NULL, 10);
-            if (episodes <= 0 || episodes > 9999) { //TODO check that episodes_downloaded <= episodes
+            if (episodes <= 0 || episodes > 9999) {
                 fprintf(stderr, "Failed to parse new anime downloaded episodes count\n");
                 return -1;
             }
 
-            if (!json_object_set_uint64(episodes_obj, episodes)) {
+            if (update_anime(anime, episodes) != 0) {
                 fprintf(stderr, "Failed to set new anime downloaded episodes count\n");
                 return -1;
             }
@@ -485,6 +485,8 @@ int edit_anime(struct json_object * anime) {
             }
 
             delayed_episodes_str[sizeof(delayed_episodes_str)-1] = '\0';
+            // clear current delayed episodes array TODO this makes saving after edit_anime() returns an error unsafe
+            json_object_array_del_idx(delayed_episodes_obj, 0, delayed_episodes_length);
             printf("Enter new anime delayed episodes: ");
             while (getchar() != '\n'); // clear stdin
             while (scanning) {
@@ -574,6 +576,38 @@ int delete_anime(struct json_object * anime_array, size_t delete_at) {
     }
 
     json_object_array_shrink(anime_array, 0);
+
+    return 0;
+}
+
+/**
+ * Update anime's downloaded episodes count
+ * @param anime anime to update
+ * @param downloaded_episodes new downloaded episodes count
+ * @return 0 on success, otherwise -1 on error
+ */
+int update_anime(struct json_object * anime, size_t downloaded_episodes) {
+    struct json_object * episodes_obj;
+    struct json_object * downloaded_episodes_obj;
+
+    if (!json_object_object_get_ex(anime, "episodes", &episodes_obj)) {
+        fprintf(stderr, "Failed to get anime episodes count\n");
+        return -1;
+    }
+    if (!json_object_object_get_ex(anime, "episodes_downloaded", &downloaded_episodes_obj)) {
+        fprintf(stderr, "Failed to get anime downloaded episodes count\n");
+        return -1;
+    }
+
+    if (json_object_get_uint64(episodes_obj) < downloaded_episodes) {
+        fprintf(stderr, "Failed to set new downloaded episodes count, it can't be bigger than anime's episode count\n");
+        return -1;
+    }
+
+    if (!json_object_set_uint64(downloaded_episodes_obj, downloaded_episodes)) {
+        fprintf(stderr, "Failed to set new anime downloaded episodes count\n");
+        return -1;
+    }
 
     return 0;
 }
