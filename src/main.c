@@ -10,6 +10,19 @@
 #define APP_SUBFOLDER "/aweek-c"
 #define SAVED_ANIME_FILENAME "/anime.json"
 
+#define APP_NAME "aweek-c"
+#define VERSION "1.0.0{GIT-COMMIT}"
+
+int print_version() {
+    fprintf(stderr, APP_NAME " " VERSION "\n");
+    return 0;
+}
+
+int print_help() {
+    fprintf(stderr, "TODO: print help\n");
+    return 0;
+}
+
 char* get_save_anime_filepath() {
     char * config_filepath = getenv("XDG_CONFIG_HOME");
     if (config_filepath == NULL) {
@@ -62,6 +75,7 @@ struct json_object * load_saved_anime(char* filepath) {
     struct stat sb;
     if (stat(filepath, &sb) != 0) {
         fprintf(stderr, "Failed to get file information\n");
+        return NULL;
     }
 
     char * buffer = malloc(sb.st_size + 1);
@@ -69,6 +83,11 @@ struct json_object * load_saved_anime(char* filepath) {
     buffer[sb.st_size] = '\0';
 
     FILE * file = fopen(filepath, "r");
+    if (file == NULL) {
+        fprintf(stderr, "Failed to open the file for reading\n");
+        free(buffer);
+        return NULL;
+    }
     if (fread(buffer, sb.st_size, 1, file) != 1) {
         fprintf(stderr, "Failed to read file\n");
         fclose(file);
@@ -90,7 +109,93 @@ struct json_object * load_saved_anime(char* filepath) {
     return anime_array;
 }
 
-int main() {
+int save_anime(char* filepath, struct json_object * anime_array) {
+    const char * json_str;
+    size_t json_str_len;
+    FILE * file = fopen(filepath, "w");
+    if (file == NULL) {
+        fprintf(stderr, "Failed to open the file for writing\n");
+        return -1;
+    }
+
+    json_str = json_object_to_json_string_ext(anime_array, JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_SPACED);
+    json_str_len = strlen(json_str);
+
+    if (fwrite(json_str, sizeof(char), json_str_len, file) != json_str_len) {
+        fprintf(stderr, "Failed to write anime information into the file\n");
+        fclose(file);
+        return -1;
+    }
+
+    fclose(file);
+    return 0;
+}
+
+/**
+ * Process arguments and take an appropriate action
+ * @param argc number of arguments
+ * @param argv arguments array
+ * @param anime_array anime array to use in actions
+ * @return on success, 1 is returned if saving is necessary, 0 if not, otherwise -1 on error
+ */
+int process_args_do_action(int argc, char ** argv, struct json_object * anime_array) {
+    if (argc == 1) {
+        print_new_episodes(anime_array);
+        return 0;
+    }
+
+    size_t anime_id, episodes;
+    if (argc > 2) {
+        anime_id = strtoul(argv[2], NULL, 10) - 1;
+        if (anime_id == 0 || anime_id >= json_object_array_length(anime_array)) {
+            fprintf(stderr, "No anime with id %zu.\n", anime_id + 1);
+            return -1;
+        }
+    }
+    if (argc > 3) {
+        episodes = strtoul(argv[3], NULL, 10);
+    }
+
+    if ('a' == argv[1][0] && (strlen(argv[1]) == 1 ||  strcmp("add", argv[1]) == 0)) { // ADD
+        return add_anime(anime_array, MANUAL) == 0 ? 1 : -1;
+    } else if ('d' == argv[1][0] && (strlen(argv[1]) == 1 ||  strcmp("delete", argv[1]) == 0)) { // DELETE
+        if (argc < 3) {
+            fprintf(stderr, "Please specify id of the anime to delete.\n");
+            return -1;
+        }
+        return delete_anime(anime_array, anime_id) == 0 ? 1 : -1;
+    } else if ('u' == argv[1][0] && (strlen(argv[1]) == 1 ||  strcmp("update", argv[1]) == 0)) { // UPDATE
+        if (argc < 4) {
+            fprintf(stderr, "Please specify id of the anime to update and new downloaded episodes count.\n");
+            return -1;
+        }
+        return update_anime(json_object_array_get_idx(anime_array, anime_id), episodes) == 0 ? 1 : -1;
+    } else if ('e' == argv[1][0] && (strlen(argv[1]) == 1 ||  strcmp("edit", argv[1]) == 0)) { // EDIT
+        if (argc < 3) {
+            fprintf(stderr, "Please specify id of the anime to edit.\n");
+            return -1;
+        }
+        return edit_anime(json_object_array_get_idx(anime_array, anime_id)) == 0 ? 1 : -1;
+    } else if ('i' == argv[1][0] && (strlen(argv[1]) == 1 ||  strcmp("ignore", argv[1]) == 0)) { // IGNORE
+        if (argc < 3) {
+            fprintf(stderr, "Please specify id of the anime to toggle the ignore flag on.\n");
+            return -1;
+        }
+        return toggle_anime_ignored(json_object_array_get_idx(anime_array, anime_id)) == 0 ? 1 : -1;
+    } else if ('l' == argv[1][0] && (strlen(argv[1]) == 1 ||  strcmp("list", argv[1]) == 0)) { // LIST
+        return list_all(anime_array);
+    } else if ('n' == argv[1][0] && (strlen(argv[1]) == 1 ||  strcmp("new-episodes-count", argv[1]) == 0)) { // NEW EPISODES COUNT
+        return print_new_episodes_count(anime_array);
+    } else if ('v' == argv[1][0] && (strlen(argv[1]) == 1 ||  strcmp("version", argv[1]) == 0)) { // VERSION
+        return print_version();
+    } else { // HELP
+        return print_help();
+    }
+
+    return -1;
+}
+
+int main(int argc, char ** argv) {
     char * filepath = get_save_anime_filepath();
     if (filepath == NULL) return -1;
 
@@ -101,25 +206,14 @@ int main() {
         return -2;
     }
 
-    list_all(anime_array);
+    int return_code = process_args_do_action(argc, argv, anime_array);
 
-    print_new_episodes(anime_array);
-
-    print_new_episodes_count(anime_array);
-
-    //add_anime(anime_array, MANUAL);
-
-    //edit_anime(json_object_array_get_idx(anime_array, 0));
-
-    //delete_anime(anime_array, 0);
-
-    //update_anime(json_object_array_get_idx(anime_array, 0), 5);
-
-    //toggle_anime_ignored(json_object_array_get_idx(anime_array, 0));
-
-    puts(json_object_to_json_string_ext(anime_array, JSON_C_TO_STRING_PRETTY | JSON_C_TO_STRING_SPACED));
+    if (return_code == 1) {
+        save_anime(filepath, anime_array);
+        return_code = 0;
+    }
 
     json_object_put(anime_array);
     free(filepath);
-    return 0;
+    return return_code;
 }
