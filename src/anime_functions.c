@@ -566,12 +566,12 @@ int edit_anime(struct json_object * anime) {
  */
 int delete_anime(struct json_object * anime_array, size_t delete_at) {
     if (json_object_array_length(anime_array) <= delete_at) {
-        fprintf(stderr, "Failed to delete anime with id %zu, no such anime exists\n", delete_at);
+        fprintf(stderr, "Failed to delete anime with id %zu, no such anime exists\n", delete_at+1);
         return -1;
     }
 
     if (json_object_array_del_idx(anime_array, delete_at, 1) != 0) {
-        fprintf(stderr, "Failed to delete anime with id %zu\n", delete_at);
+        fprintf(stderr, "Failed to delete anime with id %zu\n", delete_at+1);
         return -1;
     }
 
