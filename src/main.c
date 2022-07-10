@@ -13,16 +13,29 @@
 #define APP_NAME "aweek-c"
 #define VERSION "1.0.0{GIT-COMMIT}"
 
+/**
+ * Print program version
+ * @return always 0
+ */
 int print_version() {
     fprintf(stderr, APP_NAME " " VERSION "\n");
     return 0;
 }
 
+/**
+ * Print help
+ * @return always 0
+ */
 int print_help() {
     fprintf(stderr, "TODO: print help\n");
     return 0;
 }
 
+/**
+ * Get filepath to the file used to save anime array
+ * Creates folders if necessary, respects XDG Base Directory
+ * @return filepath to use when saving anime array, or NULL on error
+ */
 char* get_save_anime_filepath() {
     char * config_filepath = getenv("XDG_CONFIG_HOME");
     if (config_filepath == NULL) {
@@ -71,6 +84,11 @@ char* get_save_anime_filepath() {
     return filepath;
 }
 
+/**
+ * Load anime array from json file
+ * @param filepath file to load anime array from
+ * @return pointer to json object representing anime array, or NULL on error
+ */
 struct json_object * load_saved_anime(char* filepath) {
     struct stat sb;
     if (stat(filepath, &sb) != 0) {
@@ -109,6 +127,12 @@ struct json_object * load_saved_anime(char* filepath) {
     return anime_array;
 }
 
+/**
+ * Save anime array as a json file
+ * @param filepath file to save anime array to
+ * @param anime_array anime array to save
+ * @return 0 on success, otherwise -1 on error
+ */
 int save_anime(char* filepath, struct json_object * anime_array) {
     const char * json_str;
     size_t json_str_len;
@@ -195,6 +219,12 @@ int process_args_do_action(int argc, char ** argv, struct json_object * anime_ar
     return -1;
 }
 
+/**
+ * Main function
+ * @param argc number of arguments
+ * @param argv array of arguments
+ * @return 0 on success, otherwise -1 on error
+ */
 int main(int argc, char ** argv) {
     char * filepath = get_save_anime_filepath();
     if (filepath == NULL) return -1;
@@ -203,7 +233,7 @@ int main(int argc, char ** argv) {
     anime_array = load_saved_anime(filepath);
     if (anime_array == NULL) {
         free(filepath);
-        return -2;
+        return -1;
     }
 
     int return_code = process_args_do_action(argc, argv, anime_array);
