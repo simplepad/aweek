@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Wpedantic
 ifeq ($(DEBUG),false)
-	CFLAGS += -O2
+	CFLAGS += -O3
 	GIT-COMMIT =
 else
 	CFLAGS += -g
@@ -13,8 +13,8 @@ LDFLAGS += $(shell pkg-config --libs json-c)
 .PHONY: all, clean
 
 all: initfolders anime_functions main
-	echo "Building aweek-c"
-	$(CC) -o bin/aweek-c build/main.o build/anime_functions.o $(LDFLAGS)
+	echo "Building aweek"
+	$(CC) -o bin/aweek build/main.o build/anime_functions.o $(LDFLAGS)
 
 main: setversion
 	$(CC) $(CFLAGS) -c build/main_with_version.c -o build/main.o

@@ -7,10 +7,10 @@
 #include "../include/anime_functions.h"
 
 #define XDG_CONFIG_HOME_DEFAULT "~/.config"
-#define APP_SUBFOLDER "/aweek-c"
+#define APP_SUBFOLDER "/aweek"
 #define SAVED_ANIME_FILENAME "/anime.json"
 
-#define APP_NAME "aweek-c"
+#define APP_NAME "aweek"
 #define VERSION "1.0.0{GIT-COMMIT}"
 
 /**
