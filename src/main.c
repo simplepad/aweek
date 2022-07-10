@@ -18,7 +18,9 @@
  * @return always 0
  */
 int print_version() {
-    fprintf(stderr, APP_NAME " " VERSION "\n");
+    fputc('\n', stdout);
+    fprintf(stdout, APP_NAME " " VERSION "\n");
+    fputc('\n', stdout);
     return 0;
 }
 
@@ -27,7 +29,18 @@ int print_version() {
  * @return always 0
  */
 int print_help() {
-    fprintf(stderr, "TODO: print help\n");
+    print_version();
+    fprintf(stdout, "Usage:\n");
+    fprintf(stdout, "\t" APP_NAME "                                                  list new episodes\n");
+    fprintf(stdout, "\t" APP_NAME " (a)dd                                            add anime\n");
+    fprintf(stdout, "\t" APP_NAME " (d)elete     <anime_id>                          delete anime\n");
+    fprintf(stdout, "\t" APP_NAME " (u)pdate     <anime_id> <downloaded_episodes>    update anime's downloaded episodes count\n");
+    fprintf(stdout, "\t" APP_NAME " (e)dit       <anime_id>                          edit anime\n");
+    fprintf(stdout, "\t" APP_NAME " (i)gnore     <anime_id>                          toggle ignored flag for anime\n");
+    fprintf(stdout, "\t" APP_NAME " (l)ist                                           list all anime\n");
+    fprintf(stdout, "\t" APP_NAME " (n)ew-episodes-count                             show the number of new episodes\n");
+    fprintf(stdout, "\t" APP_NAME " (v)ersion                                        print version information\n");
+    fprintf(stdout, "\t" APP_NAME " anything else                                    print this help page\n");
     return 0;
 }
 
