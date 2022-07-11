@@ -104,9 +104,8 @@ char* get_save_anime_filepath() {
  */
 struct json_object * load_saved_anime(char* filepath) {
     struct stat sb;
-    if (stat(filepath, &sb) != 0) {
-        fprintf(stderr, "Failed to get file information\n");
-        return NULL;
+    if (stat(filepath, &sb) != 0) { // file does not exist
+        return json_object_new_array_ext(1);
     }
 
     char * buffer = malloc(sb.st_size + 1);
