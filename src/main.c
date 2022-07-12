@@ -183,7 +183,7 @@ int process_args_do_action(int argc, char ** argv, struct json_object * anime_ar
     size_t anime_id = 0, episodes = 0;
     if (argc > 2) {
         anime_id = strtoul(argv[2], NULL, 10) - 1;
-        if (anime_id == 0 || anime_id >= json_object_array_length(anime_array)) {
+        if (anime_id >= json_object_array_length(anime_array)) {
             fprintf(stderr, "No anime with id %zu.\n", anime_id + 1);
             return -1;
         }
