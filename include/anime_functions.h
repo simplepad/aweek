@@ -10,5 +10,6 @@ int add_anime(struct json_object * anime_array, enum ADD_ANIME_METHOD method);
 int edit_anime(struct json_object * anime);
 int delete_anime(struct json_object * anime_array, size_t delete_at);
 int update_anime(struct json_object * anime, size_t downloaded_episodes);
+int update_anime_quick(struct json_object * anime);
 int toggle_anime_ignored(struct json_object * anime);
 #endif //AWEEK_C_ANIME_FUNCTIONS_H

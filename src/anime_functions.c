@@ -613,6 +613,22 @@ int update_anime(struct json_object * anime, size_t downloaded_episodes) {
 }
 
 /**
+ * Update anime's downloaded episodes count by incrementing it by 1
+ * @param anime anime to update
+ * @return 0 on success, otherwise -1 on error
+ */
+int update_anime_quick(struct json_object * anime) {
+    struct json_object * downloaded_episodes_obj;
+
+    if (!json_object_object_get_ex(anime, "episodes_downloaded", &downloaded_episodes_obj)) {
+        fprintf(stderr, "Failed to get anime downloaded episodes count\n");
+        return -1;
+    }
+
+    return update_anime(anime, json_object_get_uint64(downloaded_episodes_obj) + 1);
+}
+
+/**
  * Toggle anime's ignored flag
  * @param anime anime to edit
  * @return 0 on success, otherwise -1 on error

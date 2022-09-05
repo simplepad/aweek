@@ -201,11 +201,17 @@ int process_args_do_action(int argc, char ** argv, struct json_object * anime_ar
         }
         return delete_anime(anime_array, anime_id) == 0 ? 1 : -1;
     } else if ('u' == argv[1][0] && (strlen(argv[1]) == 1 ||  strcmp("update", argv[1]) == 0)) { // UPDATE
-        if (argc < 4) {
+        if (argc < 3) {
             fprintf(stderr, "Please specify id of the anime to update and new downloaded episodes count.\n");
             return -1;
         }
-        return update_anime(json_object_array_get_idx(anime_array, anime_id), episodes) == 0 ? 1 : -1;
+	if (argc == 3) {
+	    // Quick update
+	    return update_anime_quick(json_object_array_get_idx(anime_array, anime_id)) == 0 ? 1 : -1;
+	} else {
+	    // Regular update
+            return update_anime(json_object_array_get_idx(anime_array, anime_id), episodes) == 0 ? 1 : -1;
+	}
     } else if ('e' == argv[1][0] && (strlen(argv[1]) == 1 ||  strcmp("edit", argv[1]) == 0)) { // EDIT
         if (argc < 3) {
             fprintf(stderr, "Please specify id of the anime to edit.\n");
